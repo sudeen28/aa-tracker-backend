@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bookings  Booking[]
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+model Booking {
+  id            String    @id @default(cuid())
+  pnr           String    @unique
+  status        String    @default("CONFIRMED")
+  bookingDate   String
+  ticketNumber  String
+  tourCode      String?
+  createdBy     User      @relation(fields: [userId], references: [id])
+  userId        String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  passenger         Passenger?
+  segments          Segment[]
+  fare              Fare?
+  baggage           Baggage?
+  alerts            Alert[]
+  baggageStages     BaggageStage[]
+  layover           Layover?
+  visaEntries       VisaEntry[]
+  seatConfig        SeatConfig?
+  mealOptions       MealOption[]
+  assistanceOptions AssistanceOption[]
+}
+
+model Passenger {
+  id             String  @id @default(cuid())
+  title          String
+  firstName      String
+  lastName       String
+  frequentFlyer  String?
+  passport       String?
+  booking        Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId      String  @unique
+}
+
+model Segment {
+  id            String  @id @default(cuid())
+  flightNumber  String
+  aircraft      String
+  fromCode      String
+  fromCity      String
+  fromTerminal  String
+  fromGate      String
+  fromLat       Float
+  fromLng       Float
+  toCode        String
+  toCity        String
+  toTerminal    String
+  toGate        String
+  toLat         Float
+  toLng         Float
+  departsDate   String
+  departsTime   String
+  arrivesDate   String
+  arrivesTime   String
+  duration      String
+  seat          String
+  cabinClass    String
+  meal          String
+  status        String  @default("On Time")
+  order         Int     @default(0)
+  booking       Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId     String
+}
+
+model Fare {
+  id                  String  @id @default(cuid())
+  basis               String
+  cabinClass          String
+  ticketFare          String
+  fuelSurcharge       String
+  taxes               String
+  serviceCharge       String
+  aviationLevy        String
+  total               String
+  payment             String
+  purchaseDate        String
+  validBefore         String?
+  validAfter          String?
+  co2                 String?
+  changesBefore       String?
+  changesAfter        String?
+  cancelBefore        String?
+  cancelAfter         String?
+  noShow              String?
+  notValidNote        String?
+  booking             Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId           String  @unique
+}
+
+model Baggage {
+  id        String  @id @default(cuid())
+  personal  String
+  carryOn   String
+  checked   String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String  @unique
+}
+
+model Alert {
+  id        String  @id @default(cuid())
+  type      String
+  icon      String
+  message   String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String
+}
+
+model BaggageStage {
+  id           String  @id @default(cuid())
+  label        String
+  icon         String
+  description  String
+  time         String?
+  isCurrent    Boolean @default(false)
+  order        Int     @default(0)
+  booking      Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId    String
+}
+
+model Layover {
+  id               String       @id @default(cuid())
+  airport          String
+  code             String
+  country          String
+  connectionTime   String
+  arrivalFlight    String
+  arrivalTime      String
+  arrivalTerminal  String
+  arrivalGate      String
+  depFlight        String
+  depTime          String
+  depTerminal      String
+  depGate          String
+  sameTerminal     Boolean      @default(true)
+  transferWalk     String?
+  booking          Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId        String       @unique
+  tips             LayoverTip[]
+}
+
+model LayoverTip {
+  id        String  @id @default(cuid())
+  icon      String
+  title     String
+  text      String
+  order     Int     @default(0)
+  layover   Layover @relation(fields: [layoverId], references: [id], onDelete: Cascade)
+  layoverId String
+}
+
+model VisaEntry {
+  id           String   @id @default(cuid())
+  country      String
+  code         String
+  flag         String
+  purpose      String
+  status       String
+  statusLabel  String
+  statusColor  String
+  summary      String
+  tip          String
+  tipType      String   @default("info")
+  requirements Json
+  exemptions   Json
+  checklist    Json?
+  order        Int      @default(0)
+  booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId    String
+}
+
+model SeatConfig {
+  id            String  @id @default(cuid())
+  aircraft      String
+  flightLabel   String
+  selectedSeat  String
+  sections      Json
+  occupied      Json
+  exits         Json
+  booking       Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId     String  @unique
+}
+
+model MealOption {
+  id       String  @id @default(cuid())
+  icon     String
+  label    String
+  desc     String
+  tag      String?
+  order    Int     @default(0)
+  booking  Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String
+}
+
+model AssistanceOption {
+  id        String  @id @default(cuid())
+  icon      String
+  label     String
+  desc      String
+  category  String
+  code      String
+  order     Int     @default(0)
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String
+}
