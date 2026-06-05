@@ -1,6 +1,7 @@
 import express from "express";
 import prisma from "../lib/prisma.js";
 import { protect } from "../middleware/auth.js";
+import { sendBookingConfirmation } from "../lib/email.js";
 
 const router = express.Router();
 router.use(protect);
@@ -63,7 +64,7 @@ router.post("/bookings", async (req, res) => {
         ticketNumber: ticketNumber || "001-" + Math.floor(Math.random() * 9000000000 + 1000000000),
         tourCode: tourCode || null,
         userId: req.user.id,
-        passenger: passenger ? { create: { title: passenger.title, firstName: passenger.firstName, lastName: passenger.lastName, frequentFlyer: passenger.frequentFlyer || null, passport: passenger.passport || null } } : undefined,
+        passenger: passenger ? { create: { title: passenger.title, firstName: passenger.firstName, lastName: passenger.lastName, email: passenger.email || null, frequentFlyer: passenger.frequentFlyer || null, passport: passenger.passport || null } } : undefined,
         segments: segments?.length ? { create: segments.map((s, i) => ({ flightNumber: s.flightNumber, aircraft: s.aircraft, fromCode: s.fromCode, fromCity: s.fromCity, fromTerminal: s.fromTerminal, fromGate: s.fromGate, fromLat: parseFloat(s.fromLat)||0, fromLng: parseFloat(s.fromLng)||0, toCode: s.toCode, toCity: s.toCity, toTerminal: s.toTerminal, toGate: s.toGate, toLat: parseFloat(s.toLat)||0, toLng: parseFloat(s.toLng)||0, departsDate: s.departsDate, departsTime: s.departsTime, arrivesDate: s.arrivesDate, arrivesTime: s.arrivesTime, duration: s.duration, seat: s.seat, cabinClass: s.cabinClass, meal: s.meal, status: s.status||"On Time", order: i })) } : undefined,
         fare: fare ? { create: { basis: fare.basis, cabinClass: fare.cabinClass, ticketFare: fare.ticketFare, fuelSurcharge: fare.fuelSurcharge, taxes: fare.taxes, serviceCharge: fare.serviceCharge, aviationLevy: fare.aviationLevy, total: fare.total, payment: fare.payment, purchaseDate: fare.purchaseDate, validBefore: fare.validBefore||null, validAfter: fare.validAfter||null, co2: fare.co2||null, changesBefore: fare.changesBefore||null, changesAfter: fare.changesAfter||null, cancelBefore: fare.cancelBefore||null, cancelAfter: fare.cancelAfter||null, noShow: fare.noShow||null, notValidNote: fare.notValidNote||null } } : undefined,
         baggage: baggage ? { create: { personal: baggage.personal, carryOn: baggage.carryOn, checked: baggage.checked } } : undefined,
@@ -77,6 +78,22 @@ router.post("/bookings", async (req, res) => {
       },
       include: FULL_INCLUDE,
     });
+
+    // Send confirmation email
+    if (booking.passenger?.email) {
+      const emailData = {
+        pnr: booking.pnr,
+        status: booking.status,
+        bookingDate: booking.bookingDate,
+        ticketNumber: booking.ticketNumber,
+        tourCode: booking.tourCode,
+        passenger: booking.passenger,
+        segments: booking.segments,
+        fare: booking.fare,
+        baggage: booking.baggage,
+      };
+      sendBookingConfirmation(emailData).catch(err => console.error("Email failed:", err));
+    }
 
     res.status(201).json({ message: "Booking created.", pnr, booking });
   } catch (err) { res.status(500).json({ error: err.message }); }

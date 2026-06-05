@@ -33,6 +33,7 @@ router.get("/:pnr", async (req, res) => {
       passenger: booking.passenger ? {
         title: booking.passenger.title,
         name: booking.passenger.firstName + " " + booking.passenger.lastName,
+        email: booking.passenger.email || null,
         frequent_flyer: booking.passenger.frequentFlyer || "N/A",
         passport: booking.passenger.passport || "N/A",
       } : null,

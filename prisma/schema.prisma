@@ -53,6 +53,7 @@ model Passenger {
   title          String
   firstName      String
   lastName       String
+  email          String?
   frequentFlyer  String?
   passport       String?
   booking        Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
