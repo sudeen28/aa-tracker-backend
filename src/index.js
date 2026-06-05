@@ -11,11 +11,27 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // ---- Middleware ----
+// app.use(cors({
+//   origin: process.env.FRONTEND_URL || "*",
+//   credentials: true,
+// }));
+// app.use(express.json());
+
+
+const allowedOrigins = [
+  "https://aa-tracker-admin.vercel.app",
+  "https://arnericaairlinesbooking.netlify.app",
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "*",
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
 }));
-app.use(express.json());
 
 // ---- Routes ----
 app.get("/", (req, res) => res.json({ message: "AA Tracker API is running." }));
