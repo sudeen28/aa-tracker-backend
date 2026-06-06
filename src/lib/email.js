@@ -87,18 +87,17 @@ export async function sendBookingConfirmation(booking) {
   `;
 
   try {
-    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "accept": "application/json",
-        "api-key": process.env.BREVO_API_KEY,
-        "content-type": "application/json",
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "American Airlines", email: "noreply@quickreg.ng" },
-        to: [{ email: passengerEmail, name: passengerName }],
+        from: "American Airlines <noreply@quickreg.ng>",
+        to: [passengerEmail],
         subject: `Booking Confirmed — PNR: ${booking.pnr} | ${seg1?.fromCode || ""} → ${lastSeg?.toCode || ""}`,
-        htmlContent: html,
+        html: html,
       }),
     });
 
