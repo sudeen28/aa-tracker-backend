@@ -10,22 +10,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// ---- Middleware ----
-// app.use(cors({
-//   origin: process.env.FRONTEND_URL || "*",
-//   credentials: true,
-// }));
-// app.use(express.json());
-app.use(cors({
-  origin: "*",
-  credentials: false,
-}));
-
-
 const allowedOrigins = [
   "https://aa-tracker-admin.vercel.app",
   "https://arnericaairlinesbooking.netlify.app",
-  "https://aa-tracker-frontend.vercel.app",  // ← add this
+  "https://aa-tracker-frontend.vercel.app",
 ];
 
 app.use(cors({
@@ -37,6 +25,8 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+app.use(express.json());
 
 // ---- Routes ----
 app.get("/", (req, res) => res.json({ message: "AA Tracker API is running." }));
