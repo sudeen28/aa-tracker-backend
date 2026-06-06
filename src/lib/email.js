@@ -1,4 +1,4 @@
-import SibApiV3Sdk from "@getbrevo/brevo";
+import * as SibApiV3Sdk from "@getbrevo/brevo";
 
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
