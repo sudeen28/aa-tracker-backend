@@ -95,7 +95,7 @@ export async function sendBookingConfirmation(booking) {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "American Airlines", email: "noreply@americanairlines-tracker.com" },
+        sender: { name: "American Airlines", email: "noreply@quickreg.ng" },
         to: [{ email: passengerEmail, name: passengerName }],
         subject: `Booking Confirmed — PNR: ${booking.pnr} | ${seg1?.fromCode || ""} → ${lastSeg?.toCode || ""}`,
         htmlContent: html,
