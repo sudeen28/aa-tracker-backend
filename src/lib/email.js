@@ -1,20 +1,11 @@
-import nodemailer from "nodemailer";
+import * as Brevo from "@getbrevo/brevo";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
+const apiInstance = new Brevo.TransactionalEmailsApi();
+apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
 
 export async function sendBookingConfirmation(booking) {
   const passenger = booking.passenger;
   const segments = booking.segments || [];
-  const fare = booking.fare;
-  const baggage = booking.baggage;
   const seg1 = segments[0];
   const lastSeg = segments[segments.length - 1];
 
@@ -25,7 +16,7 @@ export async function sendBookingConfirmation(booking) {
   const passengerEmail = passenger?.email;
   if (!passengerEmail) return { error: "No passenger email provided" };
 
-  const segmentsHTML = segments.map((seg, i) => `
+  const segmentsHTML = segments.map((seg) => `
     <div style="background:#f8faff;border:1px solid #e2e8f4;border-radius:12px;margin-bottom:16px;">
       <div style="padding:12px 16px;background:linear-gradient(135deg,#0047AB,#003580);border-radius:12px 12px 0 0;">
         <span style="color:white;font-size:13px;font-weight:700;">FLIGHT ${seg.flightNumber} · ${seg.aircraft}</span>
@@ -63,14 +54,12 @@ export async function sendBookingConfirmation(booking) {
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-
         <tr>
           <td style="background:#CC0000;padding:20px 28px;border-radius:16px 16px 0 0;">
             <div style="color:white;font-size:20px;font-weight:800;">American Airlines</div>
             <div style="color:rgba(255,255,255,0.7);font-size:10px;letter-spacing:0.15em;margin-top:2px;">BOOKING CONFIRMATION</div>
           </td>
         </tr>
-
         <tr>
           <td style="background:white;padding:28px;">
             <p style="font-size:15px;color:#0f172a;">Dear <strong>${passengerName},</strong></p>
@@ -86,20 +75,18 @@ export async function sendBookingConfirmation(booking) {
             ${segmentsHTML}
 
             <div style="text-align:center;margin:24px 0;">
-              <a href="${process.env.FRONTEND_URL || "https://aa-tracker-frontend.vercel.app"}?pnr=${booking.pnr}" 
+              <a href="${process.env.FRONTEND_URL || "https://aa-tracker-frontend.vercel.app"}?pnr=${booking.pnr}"
                 style="display:inline-block;background:linear-gradient(135deg,#CC0000,#a80000);color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;">
                 View Full Itinerary →
               </a>
             </div>
           </td>
         </tr>
-
         <tr>
           <td style="background:#0f172a;padding:20px 28px;border-radius:0 0 16px 16px;">
             <div style="color:rgba(255,255,255,0.4);font-size:11px;">americanairlines.com | AAdvantage Service: 1-800-882-8880</div>
           </td>
         </tr>
-
       </table>
     </td></tr>
   </table>
@@ -108,12 +95,13 @@ export async function sendBookingConfirmation(booking) {
   `;
 
   try {
-    await transporter.sendMail({
-      from: `"American Airlines" <${process.env.GMAIL_USER}>`,
-      to: passengerEmail,
-      subject: `Booking Confirmed — PNR: ${booking.pnr} | ${seg1?.fromCode || ""} → ${lastSeg?.toCode || ""}`,
-      html,
-    });
+    const sendSmtpEmail = new Brevo.SendSmtpEmail();
+    sendSmtpEmail.subject = `Booking Confirmed — PNR: ${booking.pnr} | ${seg1?.fromCode || ""} → ${lastSeg?.toCode || ""}`;
+    sendSmtpEmail.htmlContent = html;
+    sendSmtpEmail.sender = { name: "American Airlines", email: "noreply@americanairlines-tracker.com" };
+    sendSmtpEmail.to = [{ email: passengerEmail, name: passengerName }];
+
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
     return { success: true };
   } catch (err) {
     console.error("Email error:", err);
