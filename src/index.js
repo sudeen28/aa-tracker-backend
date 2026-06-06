@@ -11,16 +11,17 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // ---- Middleware ----
-// app.use(cors({
-//   origin: process.env.FRONTEND_URL || "*",
-//   credentials: true,
-// }));
-// app.use(express.json());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "*",
+  credentials: true,
+}));
+app.use(express.json());
 
 
 const allowedOrigins = [
   "https://aa-tracker-admin.vercel.app",
   "https://arnericaairlinesbooking.netlify.app",
+  "https://aa-tracker-frontend.vercel.app",  // ← add this
 ];
 
 app.use(cors({
