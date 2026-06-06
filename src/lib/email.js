@@ -1,8 +1,3 @@
-import * as SibApiV3Sdk from "@getbrevo/brevo";
-
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
-
 export async function sendBookingConfirmation(booking) {
   const passenger = booking.passenger;
   const segments = booking.segments || [];
@@ -64,16 +59,13 @@ export async function sendBookingConfirmation(booking) {
           <td style="background:white;padding:28px;">
             <p style="font-size:15px;color:#0f172a;">Dear <strong>${passengerName},</strong></p>
             <p style="font-size:13px;color:#64748b;">Thank you for choosing American Airlines. Your booking is confirmed.</p>
-
             <div style="background:linear-gradient(135deg,#0047AB,#003580);border-radius:14px;padding:20px 24px;margin-bottom:24px;">
               <div style="color:rgba(255,255,255,0.6);font-size:10px;letter-spacing:0.15em;">BOOKING REFERENCE</div>
               <div style="color:white;font-size:36px;font-weight:800;letter-spacing:0.2em;">${booking.pnr}</div>
               <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:6px;">Ticket: ${booking.ticketNumber} · Booked: ${booking.bookingDate}</div>
             </div>
-
             <div style="font-size:11px;color:#94a3b8;letter-spacing:0.15em;margin-bottom:12px;">FLIGHT ITINERARY</div>
             ${segmentsHTML}
-
             <div style="text-align:center;margin:24px 0;">
               <a href="${process.env.FRONTEND_URL || "https://aa-tracker-frontend.vercel.app"}?pnr=${booking.pnr}"
                 style="display:inline-block;background:linear-gradient(135deg,#CC0000,#a80000);color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;">
@@ -95,12 +87,24 @@ export async function sendBookingConfirmation(booking) {
   `;
 
   try {
-const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();    sendSmtpEmail.subject = `Booking Confirmed — PNR: ${booking.pnr} | ${seg1?.fromCode || ""} → ${lastSeg?.toCode || ""}`;
-    sendSmtpEmail.htmlContent = html;
-    sendSmtpEmail.sender = { name: "American Airlines", email: "noreply@americanairlines-tracker.com" };
-    sendSmtpEmail.to = [{ email: passengerEmail, name: passengerName }];
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: "American Airlines", email: "noreply@americanairlines-tracker.com" },
+        to: [{ email: passengerEmail, name: passengerName }],
+        subject: `Booking Confirmed — PNR: ${booking.pnr} | ${seg1?.fromCode || ""} → ${lastSeg?.toCode || ""}`,
+        htmlContent: html,
+      }),
+    });
 
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const data = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(data));
+    console.log("Email sent successfully:", data);
     return { success: true };
   } catch (err) {
     console.error("Email error:", err);
