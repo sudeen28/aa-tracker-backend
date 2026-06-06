@@ -1,6 +1,6 @@
-import * as Brevo from "@getbrevo/brevo";
+import SibApiV3Sdk from "@getbrevo/brevo";
 
-const apiInstance = new Brevo.TransactionalEmailsApi();
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
 
 export async function sendBookingConfirmation(booking) {
@@ -95,8 +95,7 @@ export async function sendBookingConfirmation(booking) {
   `;
 
   try {
-    const sendSmtpEmail = new Brevo.SendSmtpEmail();
-    sendSmtpEmail.subject = `Booking Confirmed — PNR: ${booking.pnr} | ${seg1?.fromCode || ""} → ${lastSeg?.toCode || ""}`;
+const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();    sendSmtpEmail.subject = `Booking Confirmed — PNR: ${booking.pnr} | ${seg1?.fromCode || ""} → ${lastSeg?.toCode || ""}`;
     sendSmtpEmail.htmlContent = html;
     sendSmtpEmail.sender = { name: "American Airlines", email: "noreply@americanairlines-tracker.com" };
     sendSmtpEmail.to = [{ email: passengerEmail, name: passengerName }];
