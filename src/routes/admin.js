@@ -138,7 +138,29 @@ router.put("/bookings/:id", async (req, res) => {
       if (visaEntries.length) await prisma.visaEntry.createMany({ data: visaEntries.map((v, i) => ({ bookingId: id, country: v.country, code: v.code, flag: v.flag, purpose: v.purpose, status: v.status, statusLabel: v.statusLabel, statusColor: v.statusColor, summary: v.summary, tip: v.tip, tipType: v.tipType||"info", requirements: v.requirements, exemptions: v.exemptions, checklist: v.checklist||null, order: i })) });
     }
 
-    if (seatConfig) await prisma.seatConfig.upsert({ where: { bookingId: id }, update: { aircraft: seatConfig.aircraft, flightLabel: seatConfig.flightLabel, selectedSeat: seatConfig.selectedSeat, sections: seatConfig.sections, occupied: seatConfig.occupied, exits: seatConfig.exits }, create: { bookingId: id, ...seatConfig } });
+    if (seatConfig) {
+  const defaultSections = [{ name: "Economy", rows: Array.from({ length: 30 }, (_, i) => ({ row: i + 1, seats: ["A","B","C","D","E","F"] })) }];
+  await prisma.seatConfig.upsert({
+    where: { bookingId: id },
+    update: {
+      aircraft: seatConfig.aircraft,
+      flightLabel: seatConfig.flightLabel,
+      selectedSeat: seatConfig.selectedSeat,
+      sections: seatConfig.sections ?? defaultSections,
+      occupied: seatConfig.occupied,
+      exits: seatConfig.exits
+    },
+    create: {
+      bookingId: id,
+      aircraft: seatConfig.aircraft,
+      flightLabel: seatConfig.flightLabel,
+      selectedSeat: seatConfig.selectedSeat,
+      sections: seatConfig.sections ?? defaultSections,
+      occupied: seatConfig.occupied,
+      exits: seatConfig.exits
+    }
+  });
+}
 
     if (mealOptions) {
       await prisma.mealOption.deleteMany({ where: { bookingId: id } });
