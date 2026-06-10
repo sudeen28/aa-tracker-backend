@@ -26,6 +26,24 @@ router.get("/:pnr", async (req, res) => {
 
     if (!booking) return res.status(404).json({ error: "No booking found for PNR: " + pnr });
 
+    const segmentsWithStatus = await Promise.all(
+      booking.segments.map(async (s) => {
+        const live = await getFlightStatus(s.flightNumber);
+        return {
+          ...s,
+          liveStatus: live ? {
+            status: live.status,
+            dep_actual: live.dep_actual,
+            arr_actual: live.arr_actual,
+            dep_delay: live.dep_delay,
+            arr_delay: live.arr_delay,
+            dep_gate: live.dep_gate,
+            arr_gate: live.arr_gate,
+          } : null,
+        };
+      })
+    );
+
     const response = {
       pnr: booking.pnr,
       status: booking.status,
@@ -45,6 +63,7 @@ router.get("/:pnr", async (req, res) => {
         departs: s.departsDate, dep_time: s.departsTime,
         arrives: s.arrivesDate, arr_time: s.arrivesTime,
         duration: s.duration, seat: s.seat, class: s.cabinClass, meal: s.meal, status: s.status,
+        liveStatus: s.liveStatus,
       })),
       baggage: booking.baggage ? { personal: booking.baggage.personal, carry_on: booking.baggage.carryOn, checked: booking.baggage.checked } : null,
       fare: booking.fare ? {
@@ -87,21 +106,4 @@ router.get("/:pnr", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-const segmentsWithStatus = await Promise.all(
-  booking.segments.map(async (s) => {
-    const live = await getFlightStatus(s.flightNumber);
-    return {
-      ...s,
-      liveStatus: live ? {
-        status: live.status,
-        dep_actual: live.dep_actual,
-        arr_actual: live.arr_actual,
-        dep_delay: live.dep_delay,
-        arr_delay: live.arr_delay,
-        dep_gate: live.dep_gate,
-        arr_gate: live.arr_gate,
-      } : null,
-    };
-  })
-);
 export default router;
