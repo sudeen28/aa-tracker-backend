@@ -1,7 +1,7 @@
 import express from "express";
 import prisma from "../lib/prisma.js";
 import { protect } from "../middleware/auth.js";
-import { sendBookingConfirmation } from "../lib/email.js";
+import { sendBookingConfirmation, sendDelayNotification, sendOnTimeNotification, sendLandedNotification, sendBookingUpdateNotification } from "../lib/email.js";
 
 const router = express.Router();
 router.use(protect);
@@ -109,10 +109,12 @@ router.put("/bookings/:id", async (req, res) => {
 
     if (passenger) await prisma.passenger.upsert({ where: { bookingId: id }, update: passenger, create: { bookingId: id, ...passenger } });
 
-    if (segments) {
-      await prisma.segment.deleteMany({ where: { bookingId: id } });
-      if (segments.length) await prisma.segment.createMany({ data: segments.map((s, i) => ({ bookingId: id, flightNumber: s.flightNumber, aircraft: s.aircraft, fromCode: s.fromCode, fromCity: s.fromCity, fromTerminal: s.fromTerminal, fromGate: s.fromGate, fromLat: parseFloat(s.fromLat)||0, fromLng: parseFloat(s.fromLng)||0, toCode: s.toCode, toCity: s.toCity, toTerminal: s.toTerminal, toGate: s.toGate, toLat: parseFloat(s.toLat)||0, toLng: parseFloat(s.toLng)||0, departsDate: s.departsDate, departsTime: s.departsTime, arrivesDate: s.arrivesDate, arrivesTime: s.arrivesTime, duration: s.duration, seat: s.seat, cabinClass: s.cabinClass, meal: s.meal, status: s.status||"On Time", order: i })) });
-    }
+  let oldSegments = [];
+if (segments) {
+  oldSegments = await prisma.segment.findMany({ where: { bookingId: id } });
+  await prisma.segment.deleteMany({ where: { bookingId: id } });
+  if (segments.length) await prisma.segment.createMany({ data: segments.map((s, i) => ({ bookingId: id, flightNumber: s.flightNumber, aircraft: s.aircraft, fromCode: s.fromCode, fromCity: s.fromCity, fromTerminal: s.fromTerminal, fromGate: s.fromGate, fromLat: parseFloat(s.fromLat)||0, fromLng: parseFloat(s.fromLng)||0, toCode: s.toCode, toCity: s.toCity, toTerminal: s.toTerminal, toGate: s.toGate, toLat: parseFloat(s.toLat)||0, toLng: parseFloat(s.toLng)||0, departsDate: s.departsDate, departsTime: s.departsTime, arrivesDate: s.arrivesDate, arrivesTime: s.arrivesTime, duration: s.duration, seat: s.seat, cabinClass: s.cabinClass, meal: s.meal, status: s.status||"On Time", order: i })) });
+}
 
     if (fare) await prisma.fare.upsert({ where: { bookingId: id }, update: fare, create: { bookingId: id, ...fare } });
     if (baggage) await prisma.baggage.upsert({ where: { bookingId: id }, update: { personal: baggage.personal, carryOn: baggage.carryOn, checked: baggage.checked }, create: { bookingId: id, ...baggage } });
@@ -173,6 +175,28 @@ router.put("/bookings/:id", async (req, res) => {
     }
 
     const updated = await prisma.booking.findUnique({ where: { id }, include: FULL_INCLUDE });
+
+if (updated.passenger?.email) {
+  console.log("Sending update email to:", updated.passenger.email);
+  sendBookingUpdateNotification(updated).catch(err => console.error("Email error:", err));
+}
+// Send email notifications
+if (segments && updated.passenger?.email) {
+  for (const seg of segments) {
+    const oldSeg = oldSegments.find(s => s.flightNumber === seg.flightNumber);
+    if (oldSeg && oldSeg.status !== seg.status) {
+      if (seg.status === "Delayed") {
+        sendDelayNotification(updated, seg).catch(err => console.error("Email error:", err));
+      } else if (seg.status === "On Time" && oldSeg.status === "Delayed") {
+        sendOnTimeNotification(updated, seg).catch(err => console.error("Email error:", err));
+      } else if (seg.status === "Landed") {
+        sendLandedNotification(updated, seg).catch(err => console.error("Email error:", err));
+      }
+    }
+  }
+}
+
+res.json({ message: "Booking updated.", booking: updated });
     res.json({ message: "Booking updated.", booking: updated });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
