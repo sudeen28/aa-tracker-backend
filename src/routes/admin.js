@@ -197,7 +197,6 @@ if (segments && updated.passenger?.email) {
 }
 
 res.json({ message: "Booking updated.", booking: updated });
-    res.json({ message: "Booking updated.", booking: updated });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
