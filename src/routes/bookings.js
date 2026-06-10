@@ -1,5 +1,6 @@
 import express from "express";
 import prisma from "../lib/prisma.js";
+import { getFlightStatus } from "../lib/flightStatus.js";
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ router.get("/:pnr", async (req, res) => {
         frequent_flyer: booking.passenger.frequentFlyer || "N/A",
         passport: booking.passenger.passport || "N/A",
       } : null,
-      segments: booking.segments.map(s => ({
+      segments: segmentsWithStatus.map(s => ({
         flight: s.flightNumber, aircraft: s.aircraft,
         from: { code: s.fromCode, city: s.fromCity, terminal: s.fromTerminal, gate: s.fromGate, lat: s.fromLat, lng: s.fromLng },
         to: { code: s.toCode, city: s.toCity, terminal: s.toTerminal, gate: s.toGate, lat: s.toLat, lng: s.toLng },
@@ -86,4 +87,21 @@ router.get("/:pnr", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+const segmentsWithStatus = await Promise.all(
+  booking.segments.map(async (s) => {
+    const live = await getFlightStatus(s.flightNumber);
+    return {
+      ...s,
+      liveStatus: live ? {
+        status: live.status,
+        dep_actual: live.dep_actual,
+        arr_actual: live.arr_actual,
+        dep_delay: live.dep_delay,
+        arr_delay: live.arr_delay,
+        dep_gate: live.dep_gate,
+        arr_gate: live.arr_gate,
+      } : null,
+    };
+  })
+);
 export default router;
