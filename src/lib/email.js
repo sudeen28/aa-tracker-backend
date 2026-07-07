@@ -1,4 +1,6 @@
-export async function sendBookingConfirmation(booking) {
+function getTripTypeLabel(tripType) {
+  return tripType === "ROUND_TRIP" ? "Round Trip" : "One-Way Trip";
+}export async function sendBookingConfirmation(booking) {
   const passenger = booking.passenger;
   const segments = booking.segments || [];
   const seg1 = segments[0];
@@ -63,6 +65,7 @@ export async function sendBookingConfirmation(booking) {
               <div style="color:rgba(255,255,255,0.6);font-size:10px;letter-spacing:0.15em;">BOOKING REFERENCE</div>
               <div style="color:white;font-size:36px;font-weight:800;letter-spacing:0.2em;">${booking.pnr}</div>
               <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:6px;">Ticket: ${booking.ticketNumber} · Booked: ${booking.bookingDate}</div>
+              <div style="display:inline-block;background:rgba(255,255,255,0.15);color:white;font-size:11px;font-weight:700;letter-spacing:0.08em;padding:4px 10px;border-radius:6px;margin-top:10px;">${getTripTypeLabel(booking.tripType).toUpperCase()}</div>
             </div>
             <div style="font-size:11px;color:#94a3b8;letter-spacing:0.15em;margin-bottom:12px;">FLIGHT ITINERARY</div>
             ${segmentsHTML}
@@ -277,6 +280,7 @@ export async function sendBookingUpdateNotification(booking) {
     <div style="background:linear-gradient(135deg,#0047AB,#003580);border-radius:14px;padding:20px 24px;margin-bottom:20px;">
       <div style="color:rgba(255,255,255,0.6);font-size:10px;letter-spacing:0.15em;">BOOKING REFERENCE</div>
       <div style="color:white;font-size:36px;font-weight:800;letter-spacing:0.2em;">${booking.pnr}</div>
+      <div style="display:inline-block;background:rgba(255,255,255,0.15);color:white;font-size:11px;font-weight:700;letter-spacing:0.08em;padding:4px 10px;border-radius:6px;margin-top:10px;">${getTripTypeLabel(booking.tripType).toUpperCase()}</div>
     </div>
     <p style="font-size:13px;color:#64748b;">Click the button below to view your updated itinerary and confirm all details are correct.</p>
   `;

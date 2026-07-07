@@ -44,7 +44,7 @@ model Booking {
   baggage           Baggage?
   alerts            Alert[]
   baggageStages     BaggageStage[]
-  layover           Layover?
+  layovers          Layover[]
   visaEntries       VisaEntry[]
   seatConfig        SeatConfig?
   mealOptions       MealOption[]
@@ -162,10 +162,11 @@ model Layover {
   depTime          String
   depTerminal      String
   depGate          String
-  sameTerminal     Boolean      @default(true)
+ sameTerminal     Boolean      @default(true)
   transferWalk     String?
+  order            Int          @default(0)
   booking          Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  bookingId        String       @unique
+  bookingId        String
   tips             LayoverTip[]
 }
 

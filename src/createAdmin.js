@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 import prisma from "./lib/prisma.js"; // confirm this path matches your project structure
 
 async function main() {
-  const email = "you@yourdomain.com";
-  const password = "YourNewStrongPassword123!";
+  const email = "terrimornue@gmail.com";
+  const password = "Okikiola122!";
   const hashed = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.upsert({

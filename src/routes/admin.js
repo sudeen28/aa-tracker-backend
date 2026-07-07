@@ -20,8 +20,7 @@ const FULL_INCLUDE = {
   baggage: true,
   alerts: true,
   baggageStages: { orderBy: { order: "asc" } },
-  layover: { include: { tips: { orderBy: { order: "asc" } } } },
-  visaEntries: { orderBy: { order: "asc" } },
+layovers: { orderBy: { order: "asc" }, include: { tips: { orderBy: { order: "asc" } } } },  visaEntries: { orderBy: { order: "asc" } },
   seatConfig: true,
   mealOptions: { orderBy: { order: "asc" } },
   assistanceOptions: { orderBy: { order: "asc" } },
@@ -48,7 +47,7 @@ router.get("/bookings/:id", async (req, res) => {
 // CREATE booking
 router.post("/bookings", async (req, res) => {
   try {
-    const { passenger, segments, fare, baggage, alerts, baggageStages, layover, visaEntries, seatConfig, mealOptions, assistanceOptions, status, bookingDate, ticketNumber, tourCode } = req.body;
+    const { passenger, segments, fare, baggage, alerts, baggageStages, layovers, visaEntries, seatConfig, mealOptions, assistanceOptions, status, bookingDate, ticketNumber, tourCode, tripType } = req.body;
 
     let pnr, unique = false;
     while (!unique) {
@@ -60,6 +59,7 @@ router.post("/bookings", async (req, res) => {
     const booking = await prisma.booking.create({
       data: {
         pnr, status: status || "CONFIRMED",
+        tripType: tripType || "ONE_WAY",
         bookingDate: bookingDate || new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
         ticketNumber: ticketNumber || "001-" + Math.floor(Math.random() * 9000000000 + 1000000000),
         tourCode: tourCode || null,
@@ -70,7 +70,7 @@ router.post("/bookings", async (req, res) => {
         baggage: baggage ? { create: { personal: baggage.personal, carryOn: baggage.carryOn, checked: baggage.checked } } : undefined,
         alerts: alerts?.length ? { create: alerts.map(a => ({ type: a.type, icon: a.icon, message: a.message })) } : undefined,
         baggageStages: baggageStages?.length ? { create: baggageStages.map((s, i) => ({ label: s.label, icon: s.icon, description: s.description, time: s.time||null, isCurrent: s.isCurrent||false, order: i })) } : undefined,
-        layover: layover ? { create: { airport: layover.airport, code: layover.code, country: layover.country, connectionTime: layover.connectionTime, arrivalFlight: layover.arrivalFlight, arrivalTime: layover.arrivalTime, arrivalTerminal: layover.arrivalTerminal, arrivalGate: layover.arrivalGate, depFlight: layover.depFlight, depTime: layover.depTime, depTerminal: layover.depTerminal, depGate: layover.depGate, sameTerminal: layover.sameTerminal!==false, transferWalk: layover.transferWalk||null, tips: layover.tips?.length ? { create: layover.tips.map((t, i) => ({ icon: t.icon, title: t.title, text: t.text, order: i })) } : undefined } } : undefined,
+        layovers: layovers?.length ? { create: layovers.map((l, i) => ({ airport: l.airport, code: l.code, country: l.country, connectionTime: l.connectionTime, arrivalFlight: l.arrivalFlight, arrivalTime: l.arrivalTime, arrivalTerminal: l.arrivalTerminal, arrivalGate: l.arrivalGate, depFlight: l.depFlight, depTime: l.depTime, depTerminal: l.depTerminal, depGate: l.depGate, sameTerminal: l.sameTerminal!==false, transferWalk: l.transferWalk||null, order: i, tips: l.tips?.length ? { create: l.tips.map((t, j) => ({ icon: t.icon, title: t.title, text: t.text, order: j })) } : undefined })) } : undefined,
         visaEntries: visaEntries?.length ? { create: visaEntries.map((v, i) => ({ country: v.country, code: v.code, flag: v.flag, purpose: v.purpose, status: v.status, statusLabel: v.statusLabel, statusColor: v.statusColor, summary: v.summary, tip: v.tip, tipType: v.tipType||"info", requirements: v.requirements, exemptions: v.exemptions, checklist: v.checklist||null, order: i })) } : undefined,
         seatConfig: seatConfig ? { create: { aircraft: seatConfig.aircraft, flightLabel: seatConfig.flightLabel, selectedSeat: seatConfig.selectedSeat, sections: seatConfig.sections ?? [{ name: "Economy", rows: Array.from({ length: 30 }, (_, i) => ({ row: i + 1, seats: ["A","B","C","D","E","F"] })) }], occupied: seatConfig.occupied, exits: seatConfig.exits } } : undefined,
         mealOptions: mealOptions?.length ? { create: mealOptions.map((m, i) => ({ icon: m.icon, label: m.label, desc: m.desc, tag: m.tag||null, order: i })) } : undefined,
@@ -84,6 +84,7 @@ router.post("/bookings", async (req, res) => {
       const emailData = {
         pnr: booking.pnr,
         status: booking.status,
+        tripType: booking.tripType,
         bookingDate: booking.bookingDate,
         ticketNumber: booking.ticketNumber,
         tourCode: booking.tourCode,
@@ -103,10 +104,9 @@ router.post("/bookings", async (req, res) => {
 router.put("/bookings/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, tourCode, passenger, segments, fare, baggage, alerts, baggageStages, layover, visaEntries, seatConfig, mealOptions, assistanceOptions } = req.body;
+    const { status, tourCode, tripType, passenger, segments, fare, baggage, alerts, baggageStages, layovers, visaEntries, seatConfig, mealOptions, assistanceOptions } = req.body;
 
-    await prisma.booking.update({ where: { id }, data: { status, tourCode: tourCode||null } });
-
+await prisma.booking.update({ where: { id }, data: { status, tourCode: tourCode||null, ...(tripType !== undefined ? { tripType } : {}) } });
     if (passenger) await prisma.passenger.upsert({ where: { bookingId: id }, update: passenger, create: { bookingId: id, ...passenger } });
 
   let oldSegments = [];
@@ -129,10 +129,14 @@ if (segments) {
       if (baggageStages.length) await prisma.baggageStage.createMany({ data: baggageStages.map((s, i) => ({ bookingId: id, label: s.label, icon: s.icon, description: s.description, time: s.time||null, isCurrent: s.isCurrent||false, order: i })) });
     }
 
-    if (layover !== undefined) {
+   if (layovers !== undefined) {
       await prisma.layoverTip.deleteMany({ where: { layover: { bookingId: id } } });
       await prisma.layover.deleteMany({ where: { bookingId: id } });
-      if (layover) await prisma.layover.create({ data: { bookingId: id, airport: layover.airport, code: layover.code, country: layover.country, connectionTime: layover.connectionTime, arrivalFlight: layover.arrivalFlight, arrivalTime: layover.arrivalTime, arrivalTerminal: layover.arrivalTerminal, arrivalGate: layover.arrivalGate, depFlight: layover.depFlight, depTime: layover.depTime, depTerminal: layover.depTerminal, depGate: layover.depGate, sameTerminal: layover.sameTerminal!==false, transferWalk: layover.transferWalk||null, tips: layover.tips?.length ? { create: layover.tips.map((t, i) => ({ icon: t.icon, title: t.title, text: t.text, order: i })) } : undefined } });
+      if (layovers.length) {
+        for (const [i, l] of layovers.entries()) {
+          await prisma.layover.create({ data: { bookingId: id, airport: l.airport, code: l.code, country: l.country, connectionTime: l.connectionTime, arrivalFlight: l.arrivalFlight, arrivalTime: l.arrivalTime, arrivalTerminal: l.arrivalTerminal, arrivalGate: l.arrivalGate, depFlight: l.depFlight, depTime: l.depTime, depTerminal: l.depTerminal, depGate: l.depGate, sameTerminal: l.sameTerminal!==false, transferWalk: l.transferWalk||null, order: i, tips: l.tips?.length ? { create: l.tips.map((t, j) => ({ icon: t.icon, title: t.title, text: t.text, order: j })) } : undefined } });
+        }
+      }
     }
 
     if (visaEntries) {

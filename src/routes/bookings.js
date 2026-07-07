@@ -16,8 +16,7 @@ router.get("/:pnr", async (req, res) => {
         baggage: true,
         alerts: true,
         baggageStages: { orderBy: { order: "asc" } },
-        layover: { include: { tips: { orderBy: { order: "asc" } } } },
-        visaEntries: { orderBy: { order: "asc" } },
+layovers: { orderBy: { order: "asc" }, include: { tips: { orderBy: { order: "asc" } } } },        visaEntries: { orderBy: { order: "asc" } },
         seatConfig: true,
         mealOptions: { orderBy: { order: "asc" } },
         assistanceOptions: { orderBy: { order: "asc" } },
@@ -47,6 +46,7 @@ router.get("/:pnr", async (req, res) => {
     const response = {
       pnr: booking.pnr,
       status: booking.status,
+      trip_type: booking.tripType,
       booking_date: booking.bookingDate,
       ticket_number: booking.ticketNumber,
       passenger: booking.passenger ? {
@@ -79,14 +79,14 @@ router.get("/:pnr", async (req, res) => {
       } : null,
       alerts: booking.alerts.map(a => ({ type: a.type, icon: a.icon, message: a.message })),
       baggage_stages: booking.baggageStages.map(s => ({ label: s.label, icon: s.icon, desc: s.description, time: s.time, isCurrent: s.isCurrent })),
-      layover: booking.layover ? {
-        airport: booking.layover.airport, code: booking.layover.code, country: booking.layover.country,
-        connection_time: booking.layover.connectionTime,
-        arrival: { flight: booking.layover.arrivalFlight, time: booking.layover.arrivalTime, terminal: booking.layover.arrivalTerminal, gate: booking.layover.arrivalGate },
-        departure: { flight: booking.layover.depFlight, time: booking.layover.depTime, terminal: booking.layover.depTerminal, gate: booking.layover.depGate },
-        same_terminal: booking.layover.sameTerminal, transfer_walk: booking.layover.transferWalk,
-        tips: booking.layover.tips.map(t => ({ icon: t.icon, title: t.title, text: t.text })),
-      } : null,
+      layovers: booking.layovers.map(l => ({
+        airport: l.airport, code: l.code, country: l.country,
+        connection_time: l.connectionTime,
+        arrival: { flight: l.arrivalFlight, time: l.arrivalTime, terminal: l.arrivalTerminal, gate: l.arrivalGate },
+        departure: { flight: l.depFlight, time: l.depTime, terminal: l.depTerminal, gate: l.depGate },
+        same_terminal: l.sameTerminal, transfer_walk: l.transferWalk,
+        tips: l.tips.map(t => ({ icon: t.icon, title: t.title, text: t.text })),
+      })),
       visa_entries: booking.visaEntries.map(v => ({
         country: v.country, code: v.code, flag: v.flag, purpose: v.purpose,
         status: v.status, statusLabel: v.statusLabel, statusColor: v.statusColor,
