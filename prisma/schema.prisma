@@ -29,6 +29,7 @@ model Booking {
   id            String    @id @default(cuid())
   pnr           String    @unique
   status        String    @default("CONFIRMED")
+  tripType      String    @default("ONE_WAY")
   bookingDate   String
   ticketNumber  String
   tourCode      String?
