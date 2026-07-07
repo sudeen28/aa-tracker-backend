@@ -67,22 +67,23 @@ router.post("/setup", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required." });
-    }
+    if (!email || !password) return res.status(400).json({ error: "Email and password required." });
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-
-    const token = signToken(user.id);
-    res.json({
-      token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, role: true, name: true, password: true },
     });
+
+    if (!user) return res.status(401).json({ error: "Invalid email or password." });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ error: "Invalid email or password." });
+
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server error." });
   }
 });
 
